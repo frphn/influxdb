@@ -14,13 +14,6 @@ var (
 
 var _ influxdb.SecretService = (*Service)(nil)
 
-func (s *Service) initializeSecrets(ctx context.Context, tx Tx) error {
-	if _, err := tx.Bucket(secretBucket); err != nil {
-		return err
-	}
-	return nil
-}
-
 // LoadSecret retrieves the secret value v found at key k for organization orgID.
 func (s *Service) LoadSecret(ctx context.Context, orgID influxdb.ID, k string) (string, error) {
 	var v string
