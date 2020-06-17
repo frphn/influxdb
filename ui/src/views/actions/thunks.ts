@@ -122,7 +122,7 @@ export const getViewForTimeMachine = (
   }
 }
 
-export const setQueryResultsByQueryID = (queryID: string) => async (
+export const setQueryResultsByQueryID = (queryID: string) => (
   dispatch,
   getState: GetState
 ): Promise<void> => {
@@ -145,7 +145,7 @@ export const setQueryResultsForCell = (
   dashboardID: string,
   cellID: string,
   timeMachineID: TimeMachineID
-) => async (dispatch, getState: GetState): Promise<void> => {
+) => (dispatch, getState: GetState): Promise<void> => {
   try {
     dispatch(getViewForTimeMachine(dashboardID, cellID, timeMachineID))
     const state = getState()
