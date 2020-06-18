@@ -386,6 +386,34 @@ func (h *Handler) Statistics(tags map[string]string) []models.Statistic {
 	}}
 }
 
+type headerHandler struct {
+	f http.Handler // handler to call
+	h [][]string   // headers
+}
+
+func (hh *headerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	for _, kvp := range hh.h {
+		if len(kvp) != 2 {
+			// FIXME(ayan): this should be an error.  maybe we should ensure each
+			// each entry has two items earlier and have NewHandler() return an
+			// error value.
+			continue
+		}
+		w.Header().Add(kvp[0], kvp[1])
+	}
+	hh.f.ServeHTTP(w, r)
+}
+
+func (h *Handler) headerWrapper(f http.Handler) http.Handler {
+	if len(h.Config.HTTPHeaders) == 0 {
+		return f
+	}
+	return &headerHandler{
+		f: f,
+		h: h.Config.HTTPHeaders,
+	}
+}
+
 // AddRoutes sets the provided routes on the handler.
 func (h *Handler) AddRoutes(routes ...Route) {
 	for _, r := range routes {
@@ -400,6 +428,8 @@ func (h *Handler) AddRoutes(routes ...Route) {
 		if hf, ok := r.HandlerFunc.(func(http.ResponseWriter, *http.Request)); ok {
 			handler = http.HandlerFunc(hf)
 		}
+
+		handler = h.headerWrapper(handler)
 
 		// Throttle route if this is a write endpoint.
 		if r.Method == http.MethodPost {
