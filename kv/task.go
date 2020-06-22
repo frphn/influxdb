@@ -674,7 +674,7 @@ func (s *Service) createTask(ctx context.Context, tx Tx, tc influxdb.TaskCreate)
 	// 	return nil, influxdb.ErrInvalidOwnerID
 	// }
 
-	opt, err := options.FromScript(s.FluxLanguageService, tc.Flux)
+	options, err := s.parseFluxOptions(tc.Flux)
 	if err != nil {
 		return nil, influxdb.ErrTaskOptionParse(err)
 	}
@@ -691,19 +691,19 @@ func (s *Service) createTask(ctx context.Context, tx Tx, tc influxdb.TaskCreate)
 		Organization:    org.Name,
 		OwnerID:         tc.OwnerID,
 		Metadata:        tc.Metadata,
-		Name:            opt.Name,
+		Name:            options.Name,
 		Description:     tc.Description,
 		Status:          tc.Status,
 		Flux:            tc.Flux,
-		Every:           opt.Every.String(),
-		Cron:            opt.Cron,
+		Every:           options.Every.String(),
+		Cron:            options.Cron,
 		CreatedAt:       createdAt,
 		LatestCompleted: createdAt,
 		LatestScheduled: createdAt,
 	}
 
-	if opt.Offset != nil {
-		off, err := time.ParseDuration(opt.Offset.String())
+	if options.Offset != nil {
+		off, err := time.ParseDuration(options.Offset.String())
 		if err != nil {
 			return nil, influxdb.ErrTaskTimeParse(err)
 		}
@@ -780,6 +780,13 @@ func (s *Service) createTask(ctx context.Context, tx Tx, tc influxdb.TaskCreate)
 	return task, nil
 }
 
+func (s *Service) parseFluxOptions(flux string) (options.Options, error) {
+	if s.FluxOptionsParser != nil {
+		return s.FluxOptionsParser.ParseFluxOptions(flux)
+	}
+	return options.FromScript(s.FluxLanguageService, flux)
+}
+
 func (s *Service) createTaskURM(ctx context.Context, tx Tx, t *influxdb.Task) error {
 	// TODO(jsteenb2): should not be getting authorizer inside the store, should terminate at the
 	//  transport layer then pass user id everywhere else.
@@ -830,7 +837,7 @@ func (s *Service) updateTask(ctx context.Context, tx Tx, id influxdb.ID, upd inf
 		}
 		task.Flux = *upd.Flux
 
-		options, err := options.FromScript(s.FluxLanguageService, *upd.Flux)
+		options, err := s.parseFluxOptions(*upd.Flux)
 		if err != nil {
 			return nil, influxdb.ErrTaskOptionParse(err)
 		}
